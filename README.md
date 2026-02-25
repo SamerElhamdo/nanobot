@@ -899,6 +899,9 @@ At startup the gateway runs `nanobot ensure-config` then starts: env vars are me
 | `TELEGRAM_ENABLED` | `true` or `1` | Enable Telegram channel |
 | `TELEGRAM_ALLOW_FROM` | `johndoe,123456789` | Comma-separated usernames or user IDs (empty = allow all) |
 | `TELEGRAM_REPLY_TO_MESSAGE` | `true` or `1` | Quote original message in replies |
+| `GATEWAY_ADMIN_TOKEN` | (any secret string) | Enables Admin UI at http://localhost:18790; sign in with this token |
+
+**Admin UI:** When `GATEWAY_ADMIN_TOKEN` is set, the gateway serves a web UI at `http://localhost:18790` (or your gateway URL). Sign in with the token to edit config, workspace files (SOUL.md, AGENTS.md, etc.), skills, and view env vars. From source, build the UI once: `cd admin-ui && npm install && npm run build`. Do not expose the gateway to the internet without HTTPS and additional protection.
 
 ```bash
 docker compose run --rm nanobot-cli onboard   # first-time setup (optional; env can fill config)
