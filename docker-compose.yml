@@ -10,7 +10,7 @@ services:
     container_name: nanobot-gateway
     <<: *common-config
     entrypoint: ["sh", "-c"]
-    command: ["nanobot ensure-config && exec nanobot gateway"]
+    command: ["nanobot ensure-config && (echo N | nanobot onboard) && exec nanobot gateway"]
     restart: unless-stopped
     ports:
       - 18790:18790
