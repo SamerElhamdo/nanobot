@@ -30,12 +30,6 @@ WORKDIR /app/bridge
 RUN npm install && npm run build
 WORKDIR /app
 
-# Build admin UI (gateway serves it when admin-ui/dist exists)
-COPY admin-ui/ admin-ui/
-WORKDIR /app/admin-ui
-RUN npm install && npm run build
-WORKDIR /app
-
 # Create config directory
 RUN mkdir -p /root/.nanobot
 

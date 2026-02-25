@@ -429,18 +429,8 @@ def gateway(
         console.print(f"[green]✓[/green] Cron: {cron_status['jobs']} scheduled jobs")
     
     console.print(f"[green]✓[/green] Heartbeat: every {hb_cfg.interval_s}s")
-
-    # Admin UI / API on same port (admin-ui next to nanobot package, or in Docker /app/admin-ui)
-    from nanobot.web.app import create_app
-    import uvicorn
-    _pkg_root = Path(__file__).resolve().parent.parent
-    _static_dir = _pkg_root.parent / "admin-ui"
-    web_app = create_app(static_dir=_static_dir if _static_dir.is_dir() else None)
-    server_config = uvicorn.Config(web_app, host=config.gateway.host, port=port)
-    server = uvicorn.Server(server_config)
-
+    
     async def run():
-        server_task = asyncio.create_task(server.serve())
         try:
             await cron.start()
             await heartbeat.start()
@@ -451,17 +441,12 @@ def gateway(
         except KeyboardInterrupt:
             console.print("\nShutting down...")
         finally:
-            server_task.cancel()
-            try:
-                await server_task
-            except asyncio.CancelledError:
-                pass
             await agent.close_mcp()
             heartbeat.stop()
             cron.stop()
             agent.stop()
             await channels.stop_all()
-
+    
     asyncio.run(run())
 
 

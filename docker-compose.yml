@@ -15,8 +15,6 @@ services:
     ports:
       - 18790:18790
     environment:
-      # Admin UI (set to enable http://localhost:18790 and protect with token)
-      - GATEWAY_ADMIN_TOKEN=${GATEWAY_ADMIN_TOKEN:-}
       # Provider (merged into config only when empty; existing values preserved)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       # Default model (e.g. anthropic/claude-opus-4-5)
