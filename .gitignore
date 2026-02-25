@@ -20,3 +20,19 @@ poetry.lock
 .pytest_cache/
 botpy.log
 tests/
+
+# Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.env.local
+.env.*.local
+*.tsbuildinfo
+.turbo
+.next/
+coverage/
+.cache
+.nx/
