@@ -9,13 +9,21 @@ services:
   nanobot-gateway:
     container_name: nanobot-gateway
     <<: *common-config
-    command: ["gateway"]
+    entrypoint: ["sh", "-c"]
+    command: ["nanobot ensure-config && exec nanobot gateway"]
     restart: unless-stopped
     ports:
       - 18790:18790
     environment:
-      # OpenRouter API key (optional if set in ~/.nanobot/config.json)
+      # Provider (merged into config only when empty; existing values preserved)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      # Default model (e.g. anthropic/claude-opus-4-5)
+      - NANOBOT_DEFAULT_MODEL=${NANOBOT_DEFAULT_MODEL:-}
+      # Telegram (optional)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-}
+      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+      - TELEGRAM_REPLY_TO_MESSAGE=${TELEGRAM_REPLY_TO_MESSAGE:-}
     deploy:
       resources:
         limits:
@@ -34,3 +42,8 @@ services:
     tty: true
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - NANOBOT_DEFAULT_MODEL=${NANOBOT_DEFAULT_MODEL:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-}
+      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+      - TELEGRAM_REPLY_TO_MESSAGE=${TELEGRAM_REPLY_TO_MESSAGE:-}

@@ -64,6 +64,16 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+# Env vars for optional config merge (Docker / first-run)
+_ENV_DEFAULT_MODEL = "NANOBOT_DEFAULT_MODEL"
+_ENV_TELEGRAM_TOKEN = "TELEGRAM_BOT_TOKEN"
+_ENV_TELEGRAM_ENABLED = "TELEGRAM_ENABLED"
+_ENV_TELEGRAM_ALLOW_FROM = "TELEGRAM_ALLOW_FROM"  # Comma-separated: user1,123456
+_ENV_TELEGRAM_REPLY_TO_MESSAGE = "TELEGRAM_REPLY_TO_MESSAGE"  # 1, true, yes
+
+_DEFAULT_MODEL_SCHEMA = "anthropic/claude-opus-4-5"
+
+
 def _apply_provider_env_overlay(config: Config) -> None:
     """
     If a provider's api_key is empty in config, set it from the provider's
@@ -89,6 +99,85 @@ def _apply_provider_env_overlay(config: Config) -> None:
                     extra_headers=p.extra_headers,
                 ),
             )
+
+
+def merge_env_into_config(config: Config, only_if_empty: bool = True) -> None:
+    """
+    Merge env vars into config: default model, Telegram token/enabled.
+    Used at first-run or by ensure-config so Docker can set values via env.
+
+    When only_if_empty=True, only set a field if it is empty (or model is
+    still the schema default), so existing user values are preserved.
+    When only_if_empty=False, set from env when provided (for new config).
+    """
+    from nanobot.config.schema import TelegramConfig
+
+    # Default model
+    env_model = os.environ.get(_ENV_DEFAULT_MODEL, "").strip()
+    if env_model:
+        if not only_if_empty:
+            config.agents.defaults.model = env_model
+        elif config.agents.defaults.model == _DEFAULT_MODEL_SCHEMA or not config.agents.defaults.model:
+            config.agents.defaults.model = env_model
+
+    # Telegram: token, enabled, allow_from, reply_to_message from env
+    env_token = os.environ.get(_ENV_TELEGRAM_TOKEN, "").strip()
+    env_enabled = os.environ.get(_ENV_TELEGRAM_ENABLED, "").strip().lower() in ("1", "true", "yes")
+    env_allow_from_raw = os.environ.get(_ENV_TELEGRAM_ALLOW_FROM, "").strip()
+    env_allow_from = [x.strip() for x in env_allow_from_raw.split(",") if x.strip()] if env_allow_from_raw else []
+    env_reply = os.environ.get(_ENV_TELEGRAM_REPLY_TO_MESSAGE, "").strip().lower() in ("1", "true", "yes")
+    tg = config.channels.telegram
+    set_token = bool(env_token and (not only_if_empty or not tg.token))
+    has_token = bool(env_token or tg.token)
+    set_enabled = bool(
+        env_enabled and has_token and (not only_if_empty or not tg.enabled)
+    )
+    set_allow_from = bool(env_allow_from and (not only_if_empty or not tg.allow_from))
+    set_reply = bool(env_reply and (not only_if_empty or not tg.reply_to_message))
+    if set_token or set_enabled or set_allow_from or set_reply:
+        new_token = env_token if set_token else tg.token
+        new_enabled = True if set_enabled else tg.enabled
+        new_allow_from = env_allow_from if set_allow_from else tg.allow_from
+        new_reply = True if set_reply else tg.reply_to_message
+        config.channels.telegram = TelegramConfig(
+            enabled=new_enabled,
+            token=new_token,
+            allow_from=new_allow_from,
+            proxy=tg.proxy,
+            reply_to_message=new_reply,
+        )
+
+
+def ensure_config(config_path: Path | None = None) -> Config:
+    """
+    Ensure config file exists and is updated from env without overwriting
+    existing values. Use at container startup before starting the gateway.
+
+    - If no file: create default, apply provider overlay + env merge, save.
+    - If file exists: load, apply provider overlay + env merge (only empty
+      fields), save. Preserves all existing non-empty values.
+    """
+    path = config_path or get_config_path()
+    if path.exists():
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            data = _migrate_config(data)
+            config = Config.model_validate(data)
+        except (json.JSONDecodeError, ValueError):
+            config = Config()
+            _apply_provider_env_overlay(config)
+            merge_env_into_config(config, only_if_empty=False)
+        else:
+            _apply_provider_env_overlay(config)
+            merge_env_into_config(config, only_if_empty=True)
+    else:
+        config = Config()
+        _apply_provider_env_overlay(config)
+        merge_env_into_config(config, only_if_empty=False)
+
+    save_config(config, config_path)
+    return config
 
 
 def _migrate_config(data: dict) -> dict:

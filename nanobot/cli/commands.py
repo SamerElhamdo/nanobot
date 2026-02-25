@@ -156,26 +156,38 @@ def main(
 @app.command()
 def onboard():
     """Initialize nanobot configuration and workspace."""
-    from nanobot.config.loader import get_config_path, load_config, save_config
+    from nanobot.config.loader import (
+        get_config_path,
+        load_config,
+        save_config,
+        _apply_provider_env_overlay,
+        merge_env_into_config,
+    )
     from nanobot.config.schema import Config
     from nanobot.utils.helpers import get_workspace_path
-    
+
     config_path = get_config_path()
-    
+
     if config_path.exists():
         console.print(f"[yellow]Config already exists at {config_path}[/yellow]")
         console.print("  [bold]y[/bold] = overwrite with defaults (existing values will be lost)")
         console.print("  [bold]N[/bold] = refresh config, keeping existing values and adding new fields")
         if typer.confirm("Overwrite?"):
             config = Config()
+            _apply_provider_env_overlay(config)
+            merge_env_into_config(config, only_if_empty=False)
             save_config(config)
             console.print(f"[green]✓[/green] Config reset to defaults at {config_path}")
         else:
             config = load_config()
+            merge_env_into_config(config, only_if_empty=True)
             save_config(config)
             console.print(f"[green]✓[/green] Config refreshed at {config_path} (existing values preserved)")
     else:
-        save_config(Config())
+        config = Config()
+        _apply_provider_env_overlay(config)
+        merge_env_into_config(config, only_if_empty=False)
+        save_config(config)
         console.print(f"[green]✓[/green] Created config at {config_path}")
     
     # Create workspace
@@ -265,6 +277,19 @@ def _make_provider(config: Config):
         extra_headers=p.extra_headers if p else None,
         provider_name=provider_name,
     )
+
+
+@app.command()
+def ensure_config_cmd():
+    """
+    Ensure config exists and merge env into it without overwriting existing values.
+    Use at container startup before gateway: fills OPENROUTER_API_KEY, NANOBOT_DEFAULT_MODEL,
+    TELEGRAM_BOT_TOKEN, TELEGRAM_ENABLED from env only when fields are empty.
+    """
+    from nanobot.config.loader import ensure_config, get_config_path
+
+    ensure_config()
+    console.print(f"[green]✓[/green] Config ready at {get_config_path()}")
 
 
 # ============================================================================

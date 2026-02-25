@@ -879,10 +879,29 @@ export OPENROUTER_API_KEY=sk-or-v1-xxx
 docker compose up -d nanobot-gateway
 ```
 
-Or use a `.env` file next to `docker-compose.yml` with `OPENROUTER_API_KEY=sk-or-v1-xxx`.
+Or use a `.env` file next to `docker-compose.yml`. Example:
+
+```env
+OPENROUTER_API_KEY=sk-or-v1-xxx
+NANOBOT_DEFAULT_MODEL=anthropic/claude-opus-4-5
+TELEGRAM_BOT_TOKEN=123456789:ABCdef...
+TELEGRAM_ENABLED=true
+TELEGRAM_ALLOW_FROM=myusername,987654321
+TELEGRAM_REPLY_TO_MESSAGE=true
+```
+
+At startup the gateway runs `nanobot ensure-config` then starts: env vars are merged into config only when fields are empty, so existing values in `~/.nanobot/config.json` are preserved. Optional env:
+
+| Env | Example | Description |
+|-----|---------|-------------|
+| `NANOBOT_DEFAULT_MODEL` | `anthropic/claude-opus-4-5` | Default LLM model |
+| `TELEGRAM_BOT_TOKEN` | `123456:ABC...` | Bot token from @BotFather |
+| `TELEGRAM_ENABLED` | `true` or `1` | Enable Telegram channel |
+| `TELEGRAM_ALLOW_FROM` | `johndoe,123456789` | Comma-separated usernames or user IDs (empty = allow all) |
+| `TELEGRAM_REPLY_TO_MESSAGE` | `true` or `1` | Quote original message in replies |
 
 ```bash
-docker compose run --rm nanobot-cli onboard   # first-time setup
+docker compose run --rm nanobot-cli onboard   # first-time setup (optional; env can fill config)
 vim ~/.nanobot/config.json                     # add API keys (optional if using env)
 docker compose up -d nanobot-gateway           # start gateway
 ```
