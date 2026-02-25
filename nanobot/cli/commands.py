@@ -279,7 +279,7 @@ def _make_provider(config: Config):
     )
 
 
-@app.command()
+@app.command("ensure-config")
 def ensure_config_cmd():
     """
     Ensure config exists and merge env into it without overwriting existing values.
