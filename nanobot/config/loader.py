@@ -1,9 +1,10 @@
 """Configuration loading utilities."""
 
 import json
+import os
 from pathlib import Path
 
-from nanobot.config.schema import Config
+from nanobot.config.schema import Config, ProviderConfig
 
 
 def get_config_path() -> Path:
@@ -34,12 +35,16 @@ def load_config(config_path: Path | None = None) -> Config:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             data = _migrate_config(data)
-            return Config.model_validate(data)
+            config = Config.model_validate(data)
         except (json.JSONDecodeError, ValueError) as e:
             print(f"Warning: Failed to load config from {path}: {e}")
             print("Using default configuration.")
+            config = Config()
+    else:
+        config = Config()
 
-    return Config()
+    _apply_provider_env_overlay(config)
+    return config
 
 
 def save_config(config: Config, config_path: Path | None = None) -> None:
@@ -57,6 +62,33 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def _apply_provider_env_overlay(config: Config) -> None:
+    """
+    If a provider's api_key is empty in config, set it from the provider's
+    env var (e.g. OPENROUTER_API_KEY). Allows passing API keys via environment
+    (e.g. docker-compose environment) without editing config.json.
+    """
+    from nanobot.providers.registry import PROVIDERS
+
+    for spec in PROVIDERS:
+        if not spec.env_key or spec.is_oauth:
+            continue
+        p = getattr(config.providers, spec.name, None)
+        if p is None:
+            continue
+        env_val = os.environ.get(spec.env_key, "").strip()
+        if not p.api_key and env_val:
+            setattr(
+                config.providers,
+                spec.name,
+                ProviderConfig(
+                    api_key=env_val,
+                    api_base=p.api_base,
+                    extra_headers=p.extra_headers,
+                ),
+            )
 
 
 def _migrate_config(data: dict) -> dict:

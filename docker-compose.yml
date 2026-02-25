@@ -13,6 +13,9 @@ services:
     restart: unless-stopped
     ports:
       - 18790:18790
+    environment:
+      # OpenRouter API key (optional if set in ~/.nanobot/config.json)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
     deploy:
       resources:
         limits:
@@ -29,3 +32,5 @@ services:
     command: ["status"]
     stdin_open: true
     tty: true
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}

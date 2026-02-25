@@ -872,9 +872,18 @@ The agent can also manage this file itself — ask it to "add a periodic task" a
 
 ### Docker Compose
 
+You can pass the OpenRouter API key via environment (no need to edit `config.json` inside the container):
+
+```bash
+export OPENROUTER_API_KEY=sk-or-v1-xxx
+docker compose up -d nanobot-gateway
+```
+
+Or use a `.env` file next to `docker-compose.yml` with `OPENROUTER_API_KEY=sk-or-v1-xxx`.
+
 ```bash
 docker compose run --rm nanobot-cli onboard   # first-time setup
-vim ~/.nanobot/config.json                     # add API keys
+vim ~/.nanobot/config.json                     # add API keys (optional if using env)
 docker compose up -d nanobot-gateway           # start gateway
 ```
 
