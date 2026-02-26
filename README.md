@@ -899,6 +899,19 @@ At startup the gateway runs `nanobot ensure-config` then starts: env vars are me
 | `TELEGRAM_ENABLED` | `true` or `1` | Enable Telegram channel |
 | `TELEGRAM_ALLOW_FROM` | `johndoe,123456789` | Comma-separated usernames or user IDs (empty = allow all) |
 | `TELEGRAM_REPLY_TO_MESSAGE` | `true` or `1` | Quote original message in replies |
+| `GATEWAY_ADMIN_TOKEN` | `your-secret` | If set, Admin API requires `Authorization: Bearer <token>` |
+
+**Admin UI (optional):** The UI runs on port **3000** with no auth. You set the gateway URL and token inside the UI. Start it with:
+
+```bash
+# With Docker (mount admin-ui/dist; build the UI first: cd admin-ui && npm run build)
+docker compose --profile admin-ui up -d nanobot-admin-ui
+
+# Or locally
+nanobot admin-ui
+```
+
+Then open http://localhost:3000, enter the gateway URL (e.g. `http://localhost:18790`) and the `GATEWAY_ADMIN_TOKEN` value. The API runs on the gateway port (18790); the UI is a separate client.
 
 ```bash
 docker compose run --rm nanobot-cli onboard   # first-time setup (optional; env can fill config)

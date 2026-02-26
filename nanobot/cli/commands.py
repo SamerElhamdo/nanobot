@@ -3,6 +3,7 @@
 import asyncio
 import os
 import signal
+import threading
 from pathlib import Path
 import select
 import sys
@@ -429,6 +430,18 @@ def gateway(
         console.print(f"[green]✓[/green] Cron: {cron_status['jobs']} scheduled jobs")
     
     console.print(f"[green]✓[/green] Heartbeat: every {hb_cfg.interval_s}s")
+
+    # Admin API on same port (token via GATEWAY_ADMIN_TOKEN)
+    from nanobot.config.loader import get_config_path
+    from nanobot.web import create_app as create_admin_app
+    import uvicorn
+    admin_app = create_admin_app(config_path=get_config_path(), workspace_path=config.workspace_path)
+    host = getattr(config.gateway, "host", "0.0.0.0") or "0.0.0.0"
+    def _run_uvicorn():
+        uvicorn.run(admin_app, host=host, port=port, log_level="warning")
+    http_thread = threading.Thread(target=_run_uvicorn, daemon=True)
+    http_thread.start()
+    console.print(f"[green]✓[/green] Admin API: http://{host}:{port}/api/admin/ (token via GATEWAY_ADMIN_TOKEN)")
     
     async def run():
         try:
@@ -450,6 +463,24 @@ def gateway(
     asyncio.run(run())
 
 
+@app.command("admin-ui")
+def admin_ui_cmd(
+    port: int = typer.Option(3000, "--port", "-p", help="Port for the admin UI"),
+):
+    """Serve admin UI on port 3000 (no auth). Set gateway URL and token in the UI."""
+    from nanobot.web.ui_server import create_ui_app
+    import uvicorn
+    # Prefer repo admin-ui/dist when running from source
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    static_dir = repo_root / "admin-ui" / "dist"
+    if not static_dir.exists():
+        static_dir = Path.cwd() / "admin-ui" / "dist"
+    if not static_dir.exists():
+        console.print("[red]admin-ui/dist not found.[/red] Build first: cd admin-ui && npm run build")
+        raise typer.Exit(1)
+    app = create_ui_app(static_dir)
+    console.print(f"[green]Admin UI:[/green] http://0.0.0.0:{port} (no auth; set gateway URL and token in the UI)")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 
 # ============================================================================

@@ -24,6 +24,8 @@ services:
       - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-}
       - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
       - TELEGRAM_REPLY_TO_MESSAGE=${TELEGRAM_REPLY_TO_MESSAGE:-}
+      # Admin API (optional; if set, UI must send this token)
+      - GATEWAY_ADMIN_TOKEN=${GATEWAY_ADMIN_TOKEN:-}
     deploy:
       resources:
         limits:
@@ -32,7 +34,19 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-  
+
+  # Admin UI: port 3000, no auth. Set gateway URL (e.g. http://nanobot-gateway:18790) and token in the UI.
+  nanobot-admin-ui:
+    container_name: nanobot-admin-ui
+    <<: *common-config
+    command: ["nanobot", "admin-ui"]
+    ports:
+      - 3000:3000
+    volumes:
+      - ./admin-ui/dist:/app/admin-ui/dist:ro
+    profiles:
+      - admin-ui
+
   nanobot-cli:
     <<: *common-config
     profiles:
